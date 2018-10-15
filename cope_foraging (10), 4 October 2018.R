@@ -79,6 +79,7 @@ loop.lq <- sample(x=helix.time.lq, size=1000, replace=T)
 #Find the standardized time unit in milliseconds
 time.unit<-gcd(nearq(mean(loop.hq)),nearq(mean(loop.lq)) )
 
+
 #How long (ms) do they stay in a cell while doing a loop #######
 #This will be used to tell how many steps the simulation needs to keep a cope in a cell when helices happen
 time.hq<-loop.hq/time.unit
@@ -166,12 +167,8 @@ grid.size <- 1000
 grid2<-matrix(rep(0,grid.size^2),nrow=grid.size,ncol=grid.size) #the grid is created and filled with LQ food
 
 #Add in HQ patches  #####
-
-#grid2[100:250,100:250]<-1    # 9.1204 % has HQ food in 500 x 500 px
-#grid2[100:400,100:300]<-1    # 32.6284 % has HQ food in 500 x 500 px
-#grid2[75:425,75:425]<-1    #49.2804 % has HQ food in 500 x 500 px
-
 grid2[400:750,400:750]<-1    # 12.3201 % has HQ food in 1000 x 1000 px
+#grid2[400:550,400:550]<-1    # 2.2801 % has HQ food in 1000 x 1000 px
 
 
 
@@ -187,7 +184,7 @@ grid2[400:750,400:750]<-1    # 12.3201 % has HQ food in 1000 x 1000 px
 
 ##############
 #Setting up matrix######
-timepoints <- 30000  #time steps in the model.
+timepoints <- 50000  #time steps in the model.
 num.copes <- 500     #number of copes to simulate in the model
 res.i<-matrix(ncol=num.copes, nrow=timepoints) #cols are replicates, rows are timepoints. **number of columns needs to match i in Individual based simulations below.
 
@@ -209,7 +206,7 @@ sets<-rbind(c(cos(a[0]),sin(a[0])), c(cos(a[1]),sin(a[1])),c(cos(a[2]),sin(a[2])
             c(cos(a[6]),sin(a[6])), c(cos(a[7]),sin(a[7])), c(cos(a[8]),sin(a[8])), c(cos(a[9]),sin(a[9])), c(cos(a[10]),sin(a[10])), c(cos(a[11]),sin(a[11]))  )
 
 #Set the counter for behaviors. Columns are the copepods, rows are at each time step.
-count<-matrix(nrow=timepoints,ncol=num.copes)    #System: 0 for straight runs and 1 for loops; NA= waiting during loops.p
+count<-matrix(nrow=timepoints,ncol=num.copes)    #System: 0 for straight runs and 1 for loops; NA= waiting during loops.
 qual<-matrix(nrow=timepoints,ncol=num.copes)     #0 for LQ and 1 for HQ
 
 for(i in 1:num.copes){  #number of replicates; needs to match ncol in 'Setting up matrix'
@@ -334,6 +331,8 @@ for(i in 1:ncol(raw.dat2)){
 }
 
 
+
+
 #Frequency in each cell (that was visited atleast once) #####
 freq<-as.data.frame(table(nres))
 
@@ -374,6 +373,29 @@ df.nonfood<-as.data.frame(result.nonfood)
 colnames(df.nonfood)<-c('x',"y","density")
 
 
+
+
+#####
+# concatinating data on count and qual to determine displacement and feeding rates ######
+# Matrix of 'count' (0 for straight runs and 1 for loops; NA= waiting during loops); and 'qual (0 for LQ and 1 for HQ patch)
+for(i in 1:ncol(count)) {
+    colnames(count[,i])<- c(paste(paste0('count'), i, sep="_"))
+    i=i+1}
+
+
+
+
+test.dat <- cbind(count[,1], qual[,1])
+colnames(test.dat)<- c("count","qual")
+
+head(test.dat)
+feed.dat <- na.omit(test.dat) #omit all na's (=waiting during looping). 
+head(feed.dat)
+
+helix.LQ.dat <- (which(feed.dat[,1]==1&feed.dat[,2]==0)) #number of helix in LQ food
+helix.HQ.dat <- (which(feed.dat[,1]==1&feed.dat[,2]==1)) #number of helix in HQ food
+straight.LQ.dat <- (which(feed.dat[,1]==0&feed.dat[,2]==0)) #number of straight runs in LQ food
+straight.HQ.dat <- (which(feed.dat[,1]==0&feed.dat[,2]==1)) #number of straight runs in HQ food
 
 
 #######################################################################
@@ -539,10 +561,13 @@ par(mfrow=c(1,1))
 #Set the counter for behaviors. Columns are the copepods, rows are at each time step.
 #in 'count' :  0 for straight runs and 1 for loops; NA= waiting during loops.p
 #in 'qual'  :  0 for LQ and 1 for HQ
-summary(count)
+# These are n timesteps of rows, and n copepods wide/columns.
+dim(count)
+dim(qual)
 
-time.dat <- as.matrix(count)
-
+time.dat <- cbind(count[c(1:25), c(1:5)], qual[c(1:25), c(1:5)])
+na.contiguous(time.dat[,1])
+which(count[,1]&&qual[,1]==1)
 
 
 # change all colnames
@@ -552,7 +577,156 @@ colnames(time.dat) <- c("count","qual")
 
 
 
+###########################################################################################################
+###########################################################################################################
+#Averages for text of manuscript
+###########################################################################################################
+###########################################################################################################
+
+#How many cells on average in the standardized cell.size?  #####
+
+cell.dat <- c()
+HQ.jump.dat <- c()
+LQ.jump.dat <- c()
+for(i in 1:1000) {
+  dat.2 <- read.csv("/Users/emilypetchler/Documents/Grad School Stuff/2018-2019 Seventh Year/IBM based on Helgoland/Calc params/_Model input data for active swimmers, 18 Sept. 2018.csv")
+  
+  f2.dat2 <- dat.2[c(1:1115),]     #all adults precon with f2
+  noN.dat2 <- dat.2[c(1116:1920),] #all adults precon with noN
+  
+  speed.hq <- round(nearq(sample(x=f2.dat2$velocity, size=1000, replace = T)))
+  speed.lq <- round(nearq(sample(x=noN.dat2$velocity, size=1000, replace = T))) 
+  
+  #Find the minimum cell size in mm  #######
+  cell.size<-gcd(nearq(mean(speed.hq)),nearq(mean(speed.lq)))
+  #How many cells do they travel in one time unit? #######
+  jump.hq<- time.unit* speed.hq/cell.size
+  jump.lq<- time.unit* speed.lq/cell.size
+  
+  #Approximate the jump sizes again by rounding to the nearest whole number  #
+  jump.hq<-round(jump.hq) 
+  jump.lq<-round(jump.lq)
+  
+  # i-th element of `u1` squared into `i`-th position of `usq`
+  cell.dat[i] <- cell.size
+  HQ.jump.dat[i] <- mean(jump.hq)
+  LQ.jump.dat[i] <- mean(jump.lq)
+  
+  i=i+1
+}
+
+max(cell.dat)
+min(cell.dat)
+mean(cell.dat)
+sd(cell.dat)/sqrt(length(cell.dat))
 
 
 
-##
+mean(HQ.jump.dat)
+sd(HQ.jump.dat)/sqrt(length(HQ.jump.dat))
+
+mean(LQ.jump.dat)
+sd(LQ.jump.dat)/sqrt(length(LQ.jump.dat))
+
+
+###########################################################################################################
+#How many cells on average in the standardized time.unit?  #####
+time.dat <- c()
+helix.HQ.dat <- c()
+helix.LQ.dat <- c()
+for(i in 1:1000) {
+  helix.time.hq <- (c(0.08,0.032,0.032,0.112,0.096,0.104,0.048,0.056,0.184,0.192,0.032,0.048,0.048,0.048,0.032,0.032))/(10/1250)
+  helix.time.lq <- (c(0.056,0.032,0.072,0.032,0.032,0.032,0.064,0.032,0.04))/(10/1250)
+  
+  loop.hq <- sample(x=helix.time.hq, size=1000, replace=T)
+  loop.lq <- sample(x=helix.time.lq, size=1000, replace=T)
+  
+  #Find the standardized time unit in milliseconds
+  time.unit<-gcd(nearq(mean(loop.hq)),nearq(mean(loop.lq)) )
+  
+  # i-th element of `u1` squared into `i`-th position of `usq`
+  time.dat[i] <- time.unit
+  helix.HQ.dat[i] <- mean(loop.hq)
+  helix.LQ.dat[i] <- mean(loop.lq)
+  i=i+1
+}
+
+max(time.dat)
+min(time.dat)
+mean(time.dat)
+sd(time.dat)/sqrt(length(time.dat))
+
+
+mean(helix.HQ.dat)
+sd(helix.HQ.dat)/sqrt(length(helix.HQ.dat))
+
+
+mean(helix.LQ.dat)
+sd(helix.LQ.dat)/sqrt(length(helix.LQ.dat))
+
+
+
+###########################################################################################################
+#How much time moving vs waiting in HQ vs LQ foods?  ###############
+HQ.move.dat <- c()
+LQ.move.dat <- c()
+
+for(i in 1:1000) {
+#This is taken from #GradSchool/Summer2016/Swimming analysis for EMH/Helix time budgeting, EMH experiments.xls (see master active swimming tab)
+#This is the ratio of total video time spent performing helical swimming
+ratio.helix.hq <- c(0.294117647, 0.081632653,0.095238095,0.424242424,0.48,0.419354839,0.193548387,0.212121212,0.469387755,0.444444444,0.181818182,0.272727273,0.3,0.162162162,0.111111111,0.19047619)
+ratio.helix.lq <- c(0.225806452, 0.129032258,0.147540984,0.173913043,0.070175439,0.105263158,0.380952381,0.06557377,0.131578947)
+
+#This is the ratio of all *other* active swimming, excluding helical swimming behaviors.
+ratio.otheractive.hq <- c(0.294117647,0.346938776,0.738095238,0.454545455,0.4,0.548387097,0.64516129,0.484848485,0.244897959,0.444444444,0.681818182,0.590909091,0.65,0.513513514,0.638888889,0.666666667)
+ratio.otheractive.lq <- c(0.548387097,0.548387097,0.360655738,0.52173913,0.280701754,0.315789474,0.333333333,0.37704918,0.184210526)
+
+#This is the ratio of time spent doing nothing/waiting
+ratio.waiting.hq <- 1-(ratio.helix.hq+ratio.otheractive.hq)
+ratio.waiting.lq <- 1-(ratio.helix.lq+ratio.otheractive.lq)
+
+prob.hq <- nearq(sample(size=1000, x=(1-ratio.waiting.hq), replace=T)) #probability of doing any movement in HQ food
+prob.lq <- nearq(sample(size=1000, x=(1-ratio.waiting.lq), replace=T)) #
+
+# i-th element of `u1` squared into `i`-th position of `usq`
+HQ.move.dat[i] <- prob.hq
+LQ.move.dat[i] <- prob.lq
+i=i+1
+}
+
+mean(HQ.move.dat)
+sd(HQ.move.dat)/sqrt(length(HQ.move.dat))
+min(HQ.move.dat)
+max(HQ.move.dat)
+
+
+
+mean(LQ.move.dat)
+sd(LQ.move.dat)/sqrt(length(LQ.move.dat))
+min(LQ.move.dat)
+max(LQ.move.dat)
+
+
+###########################################################################################################
+
+
+
+
+
+
+###########################################################################################################
+
+
+###########################################################################################################
+
+
+###########################################################################################################
+
+
+###########################################################################################################
+
+
+###########################################################################################################
+
+
+###########################################################################################################
