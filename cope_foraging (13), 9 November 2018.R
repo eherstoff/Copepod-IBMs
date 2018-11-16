@@ -231,16 +231,19 @@ grid2<-matrix(rep(0,grid.size^2),nrow=grid.size,ncol=grid.size) #the grid is cre
 #Add in HQ patches  #####
 #grid2[0:866,0:866]<-1    # ~75% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
 #grid2[0:707,0:707]<-1    # ~50% % has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
-grid2[0:500,0:500]<-1    # 25% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
+#grid2[0:500,0:500]<-1    # 25% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
 #grid2[0:354,0:354]<-1    # ~12.5% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
 #grid2[000:250,000:250]<-1  # 6.25% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
 #grid2[0:177,0:177]<-1    # ~3.13% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
 #grid2[0:125,0:125]<-1    # ~1.56% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
 #grid2[0:88,0:88]<-1    #  ~0.77% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
 #grid2[0:62,0:62]<-1    #  ~0.38% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
+#grid2[0:44,0:44]<-1    #  ~0.1936% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
+#grid2[0:31,0:31]<-1    #  ~0.0961% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
+grid2[0:22,0:22]<-1    #  ~0.04805% has HQ food in 1000 x 1000 px; HQ food patch at the corner of the model.
 
 ########################################################################
-##This is what % of patches within the grid had food (where hq=1)   
+##This is what % of patches within the grid had food (where hq=1)   ##### 
 patch.food = length(which(grid2==1)) / 
   (length(which(grid2==1))+length(which(grid2==0)))  
 ########################################################################
@@ -255,7 +258,7 @@ patch.food = length(which(grid2==1)) /
 
 ##############
 #Setting up matrix######
-timepoints <- 100000  #time steps in the model. Change back to 500,000?
+timepoints <- 100000  #time steps in the model. 
 num.copes <- 1000     #number of copes to simulate in the model
 res.i<-matrix(ncol=num.copes, nrow=timepoints) #cols are replicates, rows are timepoints. **number of columns needs to match i in Individual based simulations below.
 
