@@ -8,7 +8,7 @@
 # Creating empty matricies so whole process can be looped
 #######################################################################
 
-cell.size.matrix2 <- matrix(nrow=3, ncol=1)
+#cell.size.matrix2 <- matrix(nrow=3, ncol=1)
 time.unit.matrix2 <- matrix(nrow=3, ncol=1)
 
 #Residence time in HQ patch
@@ -51,7 +51,7 @@ waiting.steps.HQ.dat.matrix2        <- matrix(nrow=3, ncol=1)
 
 
 ########
-for (z in 1:length(cell.size.matrix2)) {
+for (z in 1:length(time.unit.matrix2)) {
 #######################################################################
 #Setting up functions to calculate key params for the movement of individuals through the grid #####
 nearq<-function(x){ #This function determines the nearest 1/16 for #s in calculations
@@ -97,6 +97,8 @@ gcd<-function(x,y){ #This function determines the greatest common divisor? These
     }
   }
   
+
+
 #######################################################################
 #Parameters about movement pulled from experiment, and standardized for movement in model #######
 ########################################################################
@@ -110,10 +112,12 @@ gcd<-function(x,y){ #This function determines the greatest common divisor? These
  #This is the time spent swimming in a loop (in ms), divided by the frame rate I watched (every 10th frame, shot at 1/1250 fps)
    helix.time.hq <- (c(0.08,0.032,0.032,0.112,0.096,0.104,0.048,0.056,0.184,0.192,0.032,0.048,0.048,0.048,0.032,0.032))/(10/1250)
    helix.time.lq <- (c(0.056,0.032,0.072,0.032,0.032,0.032,0.064,0.032,0.04))/(10/1250)
-
+  #this is the number of frames spent @ helical swimming.
+   
 time.unit <-gcd(nearq(mean(helix.time.hq)), nearq(mean(helix.time.lq)))
-#0.1875 frames
+#0.1875 frames is the GCD. Avg. helix.time.hq = 9.1875, and @ lq=5.444444
 #this is the mean across all the helical swimming times in both HQ and lQ food. It will be used to set time.unit
+#(really, frames here is a proxy for time in seconds.)
 
 #How long do they stay in a cell while doing a loop #######
 #This will be used to tell how many steps the simulation needs to keep a cope in a cell when helices happen
@@ -121,20 +125,16 @@ time.unit <-gcd(nearq(mean(helix.time.hq)), nearq(mean(helix.time.lq)))
   time.lq<-helix.time.lq/time.unit 
   
 #######################################################################
-#Input the speeds under different treatments #####Speeds are in millimeters/ms  #######
+#Input the speeds under different treatments #####Speeds are in millimeters/s  #######
 #Take stepwise velocity data from this file:
   dat.2 <- read.csv("/Users/emilypetchler/Documents/Grad School Stuff/2018-2019 Seventh Year/IBM based on Helgoland/Calc params/_Model input data for active swimmers, 18 Sept. 2018.csv")
   f2.dat2 <- dat.2[c(1:1115),]     #all adults precon with f2
   noN.dat2 <- dat.2[c(1116:1920),] #all adults precon with noN
- 
-#Find the model's standardized cell.size (mm/ms) #######
-  cell.size<-gcd(nearq(mean(f2.dat2$velocity)), nearq(mean(noN.dat2$velocity)))  #No need to resample things--plenty of points to work with (1115 f2, 805 noN)
-  #cell.size = 0.3125 mm/ms
-  
+
 #How many cells do they travel in one time unit? #######
-  jump.hq<-   time.unit * (f2.dat2$velocity)/cell.size   #Need to take only n timeunits, as long as data in velocity
-  jump.lq<-   time.unit * (noN.dat2$velocity)/cell.size  
-  #distance (pixels) = time.unit (n frames) * speed (mm/ms)/cell.size(mm/ms)
+  jump.hq<-   time.unit * (f2.dat2$velocity)   #Need to take only n timeunits, as long as data in velocity
+  jump.lq<-   time.unit * (noN.dat2$velocity) 
+  #jump distance (pixels) = time.unit (n frames) * speed (mm/s)
   
 #Approximate the jump sizes again by rounding to the nearest whole number  #
   jump.hq<-round(jump.hq) 
@@ -291,7 +291,7 @@ LQ.wait <- wait.times[276:516, 4]
 ##############
 #Setting up matrix######
   timepoints <-100000 #100000 time steps in the model. 
-  num.copes <- 1000   #1000 number of copes to simulate in the model
+  num.copes <- 100   #1000 number of copes to simulate in the model
   res.i<-matrix(ncol=num.copes, nrow=timepoints) #cols are replicates, rows are timepoints. **number of columns needs to match i in Individual based simulations below.
   
   getdim<-function(x,m){
@@ -489,7 +489,7 @@ for (i in 1:num.copes){
 ###########################################################################################################
 #Data needed for spreadsheet
 ###########################################################################################################
-cell.size.matrix2[z,] <-mean(cell.size)
+#cell.size.matrix2[z,] <-mean(cell.size)
 time.unit.matrix2[z,] <-mean(time.unit)
 
 #Residence time in HQ patch
@@ -541,7 +541,8 @@ z=z+1  }
 ###########################################################################################################
 #Outputs for spreadsheet
 ###########################################################################################################
-final.dat <- cbind(cell.size.matrix2, time.unit.matrix2,                        #columns 1-2
+final.dat <- cbind(#cell.size.matrix2, 
+  time.unit.matrix2,                        #columns 1-2
                    #Residence time in HQ patch
                    mean.res.time_percent.matrix2, sd.res.time_percent.matrix2,   #3-4 
                    mean.res.time_n.steps.matrix2, sd.res.time_n.steps.matrix2,   #5-6
@@ -906,139 +907,3 @@ points(set103$X.position~set103$Y.position, type="l", pch=20, cex=0.75, col="#00
 ########
 # NOTE: Export as 868 x 868 px (square figure)
 ######
-
-###########################################################################################################
-###########################################################################################################
-#Averages for text of manuscript ########
-#####
-#How many cells on average in the standardized cell.size?  #####
-
-cell.dat <- c()
-HQ.jump.dat <- c()
-LQ.jump.dat <- c()
-for(i in 1:1000) {
-  dat.2 <- read.csv("/Users/emilypetchler/Documents/Grad School Stuff/2018-2019 Seventh Year/IBM based on Helgoland/Calc params/_Model input data for active swimmers, 18 Sept. 2018.csv")
-  
-  f2.dat2 <- dat.2[c(1:1115),]     #all adults precon with f2
-  noN.dat2 <- dat.2[c(1116:1920),] #all adults precon with noN
-  
-  speed.hq <- round(nearq(sample(x=f2.dat2$velocity, size=1000, replace = T)))
-  speed.lq <- round(nearq(sample(x=noN.dat2$velocity, size=1000, replace = T))) 
-  
-  #Find the minimum cell size in mm  #######
-  cell.size<-gcd(nearq(mean(speed.hq)),nearq(mean(speed.lq)))
-  #How many cells do they travel in one time unit? #######
-  jump.hq<- time.unit* speed.hq/cell.size
-  jump.lq<- time.unit* speed.lq/cell.size
-  
-  #Approximate the jump sizes again by rounding to the nearest whole number  #
-  jump.hq<-round(jump.hq) 
-  jump.lq<-round(jump.lq)
-  
-  # i-th element of `u1` squared into `i`-th position of `usq`
-  cell.dat[i] <- cell.size
-  HQ.jump.dat[i] <- mean(jump.hq)
-  LQ.jump.dat[i] <- mean(jump.lq)
-  
-  i=i+1
-}
-
-max(cell.dat)
-min(cell.dat)
-mean(cell.dat)
-sd(cell.dat)/sqrt(length(cell.dat))
-
-
-
-mean(HQ.jump.dat)
-sd(HQ.jump.dat)/sqrt(length(HQ.jump.dat))
-
-mean(LQ.jump.dat)
-sd(LQ.jump.dat)/sqrt(length(LQ.jump.dat))
-
-
-###########################################################################################################
-#How many cells on average in the standardized time.unit?  #####
-time.dat <- c()
-helix.HQ.dat <- c()
-helix.LQ.dat <- c()
-for(i in 1:1000) {
-  helix.time.hq <- (c(0.08,0.032,0.032,0.112,0.096,0.104,0.048,0.056,0.184,0.192,0.032,0.048,0.048,0.048,0.032,0.032))/(10/1250)
-  helix.time.lq <- (c(0.056,0.032,0.072,0.032,0.032,0.032,0.064,0.032,0.04))/(10/1250)
-  
-  loop.hq <- sample(x=helix.time.hq, size=1000, replace=T)
-  loop.lq <- sample(x=helix.time.lq, size=1000, replace=T)
-  
-  #Find the standardized time unit in milliseconds
-  time.unit<-gcd(nearq(mean(loop.hq)),nearq(mean(loop.lq)) )
-  
-  # i-th element of `u1` squared into `i`-th position of `usq`
-  time.dat[i] <- time.unit
-  helix.HQ.dat[i] <- mean(loop.hq)
-  helix.LQ.dat[i] <- mean(loop.lq)
-  i=i+1
-}
-
-max(time.dat)
-min(time.dat)
-mean(time.dat)
-sd(time.dat)/sqrt(length(time.dat))
-
-
-mean(helix.HQ.dat)
-sd(helix.HQ.dat)/sqrt(length(helix.HQ.dat))
-
-
-mean(helix.LQ.dat)
-sd(helix.LQ.dat)/sqrt(length(helix.LQ.dat))
-
-
-
-###########################################################################################################
-#How much time moving vs waiting in HQ vs LQ foods?  ###############
-HQ.move.dat <- c()
-LQ.move.dat <- c()
-
-for(i in 1:1000) {
-  #This is taken from #GradSchool/Summer2016/Swimming analysis for EMH/Helix time budgeting, EMH experiments.xls (see master active swimming tab)
-  #This is the ratio of total video time spent performing helical swimming
-  ratio.helix.hq <- c(0.294117647, 0.081632653,0.095238095,0.424242424,0.48,0.419354839,0.193548387,0.212121212,0.469387755,0.444444444,0.181818182,0.272727273,0.3,0.162162162,0.111111111,0.19047619)
-  ratio.helix.lq <- c(0.225806452, 0.129032258,0.147540984,0.173913043,0.070175439,0.105263158,0.380952381,0.06557377,0.131578947)
-  
-  #This is the ratio of all *other* active swimming, excluding helical swimming behaviors.
-  ratio.otheractive.hq <- c(0.294117647,0.346938776,0.738095238,0.454545455,0.4,0.548387097,0.64516129,0.484848485,0.244897959,0.444444444,0.681818182,0.590909091,0.65,0.513513514,0.638888889,0.666666667)
-  ratio.otheractive.lq <- c(0.548387097,0.548387097,0.360655738,0.52173913,0.280701754,0.315789474,0.333333333,0.37704918,0.184210526)
-  
-  #This is the ratio of time spent doing nothing/waiting
-  ratio.waiting.hq <- 1-(ratio.helix.hq+ratio.otheractive.hq)
-  ratio.waiting.lq <- 1-(ratio.helix.lq+ratio.otheractive.lq)
-  
-  prob.hq <- nearq(sample(size=1000, x=(1-ratio.waiting.hq), replace=T)) #probability of doing any movement in HQ food
-  prob.lq <- nearq(sample(size=1000, x=(1-ratio.waiting.lq), replace=T)) #
-  
-  # i-th element of `u1` squared into `i`-th position of `usq`
-  HQ.move.dat[i] <- prob.hq
-  LQ.move.dat[i] <- prob.lq
-  i=i+1
-}
-
-mean(HQ.move.dat)
-sd(HQ.move.dat)/sqrt(length(HQ.move.dat))
-min(HQ.move.dat)
-max(HQ.move.dat)
-
-
-
-mean(LQ.move.dat)
-sd(LQ.move.dat)/sqrt(length(LQ.move.dat))
-min(LQ.move.dat)
-max(LQ.move.dat)
-
-
-###########################################################################################################
-
-
-
-
-
-###########################################################################################################
