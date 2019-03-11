@@ -1,0 +1,498 @@
+################
+#Last update: 22 February 2019, EMH
+################
+#Plotting model results
+#Models and Nulls in 500, 1000, and 5000 px space
+#% HQ = 50    25    12.5    6.25    3.13   1.56    0.77   0.38   0.1936   0.0961   0.04805
+
+#Reading in all the data ####
+dat<- read.csv("Documents/Grad School Stuff/2018-2019 Seventh Year/IBM based on Helgoland/*Current model/*IBM run results, 21 Feb 2019 .csv")
+#Column names; subsetting data #####
+  
+colnames(dat)
+# [1] "x3_ids"                "Size_X_Type"           "Type"                  "Percent_HQ"            "hq.px_sqd"            
+# [6] "model.size_sqd"        "Run."                  "cell.size"             "time.unit"             "mean_res.time_."      
+#[11] "sd_res.time_."         "mean_res.time_n.steps" "sd_res.time_n.steps"   "mean_first.visit"      "sd_first.visit"       
+#[16] "mean_means.foundHQ"    "SE_means.foundHQ"      "mean_helix.LQ"         "sd_helix.LQ"           "mean_helix.HQ"        
+#[21] "sd_helix.HQ"           "mean_helix.steps.LQ"   "sd_helix.steps.LQ"     "mean_helix.steps.HQ"   "sd_helix.steps.HQ"    
+#[26] "mean.straight.LQ"      "sd.straight.LQ"        "mean.straight.HQ"      "sd.straight.HQ"        "mean.waiting.steps.LQ"
+#[31] "sd.waiting.steps.LQ"   "mean.waiting.steps.HQ" "sd.waiting.steps.HQ" 
+
+#Pairs of data (means and errors) for graphing... 
+#   "mean_res.time_."         "sd_res.time_."         
+#   "mean_res.time_n.steps" "sd_res.time_n.steps"   
+#   "mean_first.visit"      "sd_first.visit"       
+#   "mean_means.foundHQ"    "SE_means.foundHQ"     
+# (by x3 focal behaviors)
+#   "mean_helix.LQ"         "sd_helix.LQ"           
+#   "mean_helix.HQ"        "sd_helix.HQ"    
+#   "mean_helix.steps.LQ"  "sd_helix.steps.LQ"  
+#   "mean_helix.steps.HQ"  "sd_helix.steps.HQ"    
+#   "mean.straight.LQ"      "sd.straight.LQ"
+#   "mean.straight.HQ"      "sd.straight.HQ"
+#   "mean.waiting.steps.LQ" "sd.waiting.steps.LQ"   
+#   "mean.waiting.steps.HQ" "sd.waiting.steps.HQ" 
+
+
+
+new.dat <- dat[order(dat$Type),]
+#which(new.dat$Type=="null")
+  model.dat <- new.dat[c(1:210),]
+  null.dat  <- new.dat[211:420,]
+
+which(dat$Size_X_Type=="Null_500") #Model_1000 Model_500 Model_5000 Null_1000 Null_500 Null_5000
+  model.dat_500 <- dat[1:70,]
+  model.dat_1000 <- dat[141:210,]
+  model.dat_5000 <- dat[281:350,]
+  
+  null.dat_500 <- dat[71:140,]
+  null.dat_1000<- dat[211:280,]
+  null.dat_5000<- dat[351:420,]
+
+################
+#for plotting figs
+library(ggplot2)
+#For OLS of data, and the subsequent stats
+library("lsmeans")
+library("emmeans")
+################
+
+###############################################################################################
+#Plotting data with abreviated 'mini' dat, across all repeated runs ###########################
+###############################################################################################
+  
+# n Timesteps in HQ food @ boxplot  ################
+#Number of log(timesteps in HQ), for all data
+ggplot(dat, aes(x=(Percent_HQ), y=(mean_res.time_n.steps), color=Size_X_Type))+
+  geom_boxplot(aes(group=x3_ids))+
+  # xlim(0.5, 4.25)+
+  theme_classic(base_size=17)+    
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  labs(x = "% HQ food in model", y = "Mean residence time in HQ (n timesteps +/- 1 SD)") + 
+  theme(legend.position="bottom") #this removes the legend
+  
+#Number of log(timesteps in HQ), for all data
+ggplot(dat, aes(x=log(Percent_HQ), y=log(mean_res.time_n.steps), color=Size_X_Type))+
+  geom_boxplot(aes(group=x3_ids))+
+ # xlim(0.5, 4.25)+
+  theme_classic(base_size=17)+    
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  labs(x = "log(% HQ food in model)", y = "log(Mean residence time in HQ (n timesteps +/- 1 SD))") + 
+  theme(legend.position="bottom") #this removes the legend
+
+  
+# n Timesteps in HQ food, dotplot ################
+#Number of timesteps in HQ, for all data
+allthings <- 
+  ggplot(dat, aes(x=Percent_HQ, y=mean_res.time_n.steps))+
+  geom_jitter(aes(group=x3_ids, color=Size_X_Type), size=3)+
+  geom_errorbar(position=position_dodge(width=0.5), 
+                aes(ymin=(mean_res.time_n.steps - sd_res.time_n.steps),
+                    ymax=(mean_res.time_n.steps + sd_res.time_n.steps), 
+                    x=Percent_HQ, width=0.01, color=Size_X_Type ) )  +  
+  #xlim(0.5, 6.5)+
+  #geom_hline(aes(yintercept = 0), linetype = "dashed") + 
+  labs(x = "% HQ food in model", y = "Mean residence time in HQ (n timesteps +/- 1 SD)") + 
+  theme_classic(base_size = 17)+
+    scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+    theme(legend.position="none") #this removes the legend
+  
+allthings #to print the graph
+
+
+# Stats on log-transformed data @ mean_res.time_n.steps ###########
+#log transform the response data; append to data frame
+log.dat <- log(dat$mean_res.time_n.steps)
+test.dat <- cbind(log.dat, dat)
+#create a LM; -1 is VIP to test model vs. null (otherwise only outputs type=NULL)
+lm.test <- lm(log.dat ~ -1 + model.size_sqd * Percent_HQ * Type, data=test.dat)
+
+summary(lm.test)
+#Coefficients:
+#                                     Estimate Std. Error t value Pr(>|t|)    
+#model.size_sqd                      6.281e-05  3.179e-05   1.976   0.0488 *  
+#Percent_HQ                          6.289e-02  4.309e-03  14.595   <2e-16 ***
+#Typemodel                           8.684e+00  9.404e-02  92.348   <2e-16 ***
+#Typenull                            8.313e+00  9.404e-02  88.401   <2e-16 ***
+#model.size_sqd:Percent_HQ          -1.251e-06  1.457e-06  -0.859   0.3910    
+#model.size_sqd:Typenull            -4.280e-05  4.496e-05  -0.952   0.3417    
+#Percent_HQ:Typenull                 4.805e-03  6.094e-03   0.788   0.4309    
+#model.size_sqd:Percent_HQ:Typenull  7.512e-07  2.060e-06   0.365   0.7156    
+#---
+#Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+#Residual standard error: 0.7054 on 412 degrees of freedom
+#Multiple R-squared:  0.9947,	Adjusted R-squared:  0.9946 
+#F-statistic:  9617 on 8 and 412 DF,  p-value: < 2.2e-16
+
+
+
+#Post-hoc(ish) test with continuous variable, looking to see whether there are SSDs by model vs. null
+test.lst <- lstrends(lm.test, ~Type, var = "Percent_HQ")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are SSDs between model and null WRT the C:N consumed at diff % HQs available.
+
+test.lst <- lstrends(lm.test, ~Type, var = "model.size_sqd")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are *NOT* SSDs between model and null WRT the C:N consumed at diff. model sizes tested.
+
+################
+#
+################
+# Mean time to first locate HQ food @ boxplot #####
+#Non-logged results
+ggplot(dat, aes(x=Percent_HQ, y=mean_first.visit, color=Size_X_Type))+
+  geom_boxplot(aes(group=x3_ids))+
+  # xlim(0.5, 4.25)+
+  theme_classic(base_size=17)+    
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  labs(x = "% HQ food in model", y = "Mean time to first locate HQ (n steps +/- 1 SD)") + 
+  geom_hline(aes(yintercept = 100000), linetype = "dashed") + 
+  theme(legend.position="bottom") #this removes the legend to the bottom
+
+
+#Logged results
+ggplot(dat, aes(x=log(Percent_HQ), y=log(mean_first.visit), color=Size_X_Type))+
+  geom_boxplot(aes(group=x3_ids))+
+  # xlim(0.5, 4.25)+
+  theme_classic(base_size=17)+    
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  labs(x = "log(% HQ food in model)", y = "log(Mean time to first locate HQ (n steps +/- 1 SD))") + 
+  geom_hline(aes(yintercept = log(100000)), linetype = "dashed") + 
+  theme(legend.position="bottom") #this removes the legend to the bottom
+
+
+# Mean time to first locate HQ food, dotplot ################
+allthings<-
+ggplot(dat, aes(x=Percent_HQ, y=mean_first.visit))+
+  geom_jitter(aes(group=x3_ids, color=Size_X_Type), size=3)+
+  geom_errorbar(position=position_dodge(width=0.5), 
+                aes(ymin=(mean_first.visit - sd_first.visit),
+                    ymax=(mean_first.visit + sd_first.visit), 
+                    x=Percent_HQ, width=0.01, color=Size_X_Type ) )  +  
+  #xlim(0.5, 6.5)+
+  geom_hline(aes(yintercept = 100000), linetype = "dashed") + 
+  labs(x = "% HQ food in model", y = "Mean time to first locate HQ (n steps +/- 1 SD)") + 
+  theme_classic(base_size = 17)    +
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  theme(legend.position="none") #this removes the legend
+
+allthings
+
+# Stats on log-transformed data @ mean_first.visit ###########
+#log transform the response data; append to data frame
+log.dat <- log(dat$mean_first.visit)
+test.dat <- cbind(log.dat, dat)
+#create a LM; -1 is VIP to test model vs. null (otherwise only outputs type=NULL)
+lm.test <- lm(log.dat ~ -1 + model.size_sqd * Percent_HQ * Type, data=dat)
+
+summary(lm.test)
+#Coefficients:
+#                                     Estimate Std. Error t value Pr(>|t|)    
+#model.size_sqd                      3.933e-04  1.750e-05  22.474   <2e-16 ***
+#Percent_HQ                         -7.637e-02  2.373e-03 -32.189   <2e-16 ***
+#Typemodel                           9.032e+00  5.177e-02 174.464   <2e-16 ***
+#Typenull                            9.023e+00  5.177e-02 174.277   <2e-16 ***
+#model.size_sqd:Percent_HQ           2.461e-06  8.021e-07   3.068   0.0023 ** 
+#model.size_sqd:Typenull             3.265e-06  2.475e-05   0.132   0.8951    
+#Percent_HQ:Typenull                 2.192e-03  3.355e-03   0.653   0.5140    
+#model.size_sqd:Percent_HQ:Typenull -9.917e-08  1.134e-06  -0.087   0.9304    
+
+
+#Post-hoc(ish) test with continuous variable, looking to see whether there are SSDs by model vs. null
+test.lst <- lstrends(lm.test, ~Type, var = "Percent_HQ")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are *NOT* SSDs between model and null WRT the C:N consumed at diff % HQs available.
+
+test.lst <- lstrends(lm.test, ~Type, var = "model.size_sqd")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are *NOT* SSDs between model and null WRT the C:N consumed at diff. model sizes tested.
+
+################
+#
+################
+# data forMean Ratio_HQpotential.feeding" (ratio of n steps helicing in HQ, vs total steps helical swimming)    ################
+Ratio_HQpotential.feeding    <- (dat$mean_helix.steps.HQ)/(dat$mean_helix.steps.HQ + dat$mean_helix.steps.LQ)
+Ratio_HQpotential.feeding.sd <- ((dat$sd_helix.steps.HQ) / (dat$sd_helix.steps.HQ + dat$sd_helix.steps.LQ))/sqrt(10000)
+dat <- cbind(dat, Ratio_HQpotential.feeding,Ratio_HQpotential.feeding.sd)
+# Mean Ratio_HQpotential.feeding, @ barplot #####
+#Non-logged data
+ggplot(dat, aes(x=Percent_HQ, y=Ratio_HQpotential.feeding, color=Size_X_Type))+
+  geom_boxplot(aes(group=x3_ids))+
+  theme_classic(base_size=17)+    
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  labs(x = "% HQ food in model", y = "Mean potential feeing in HQ (% time +/- 1 SD)") + 
+  theme(legend.position="bottom") #this removes the legend to the bottom
+
+#Logged data
+ggplot(dat, aes(x=log(Percent_HQ), y=log(Ratio_HQpotential.feeding), color=Size_X_Type))+
+  geom_boxplot(aes(group=x3_ids))+
+  theme_classic(base_size=17)+    
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  labs(x = "% HQ food in model", y = "Mean potential feeing in HQ (% time +/- 1 SD)") + 
+  theme(legend.position="bottom") #this removes the legend to the bottom
+
+
+
+# Mean Ratio_HQpotential.feeding, @ dotplot #####
+ggplot(dat, aes(x=Percent_HQ, y=Ratio_HQpotential.feeding))+
+  geom_jitter(aes(group=x3_ids, color=Size_X_Type), size=3)+
+  geom_errorbar(position=position_dodge(width=0.5), 
+                aes(ymin=(Ratio_HQpotential.feeding - Ratio_HQpotential.feeding.sd),
+                    ymax=(Ratio_HQpotential.feeding + Ratio_HQpotential.feeding.sd), 
+                    x=Percent_HQ, width=0.01, color=Size_X_Type ) )  +  
+  #geom_hline(aes(yintercept = 0), linetype = "dashed") + 
+  labs(x = "% HQ food in model", y = "Mean potential feeing in HQ (% time +/- 1 SD)") + 
+  theme_classic(base_size = 17)    +
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  theme(legend.position="none") #this removes the legend
+
+
+# Stats on log-transformed data @ Ratio_HQpotential.feeding ###########
+#log transform the response data; append to data frame
+log.dat <- log(dat$Ratio_HQpotential.feeding)
+test.dat <- cbind(log.dat, dat)
+#create a LM; -1 is VIP to test model vs. null (otherwise only outputs type=NULL)
+lm.test <- lm(log.dat ~ -1+ model.size_sqd * Percent_HQ * Type, data=dat)
+
+summary(lm.test)
+#                                     Estimate Std. Error t value Pr(>|t|)    
+#
+
+
+
+#Post-hoc(ish) test with continuous variable, looking to see whether there are SSDs by model vs. null
+test.lst <- lstrends(lm.test, ~Type, var = "Percent_HQ")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are SSDs between model and null WRT the C:N consumed at diff % HQs available.
+
+test.lst <- lstrends(lm.test, ~Type, var = "model.size_sqd")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are *NOT* SSDs between model and null WRT the C:N consumed at diff. model sizes tested.
+
+################
+#
+################
+#NOT NEEDED FOR PAPER
+################
+# data for Mean Ratio_HQstraight" (ratio of n steps straight swimming in HQ, vs total steps straight swimming)    ################
+Ratio_HQstraight    <- (dat$mean.straight.HQ)/(dat$mean.straight.HQ + dat$mean.straight.LQ)
+Ratio_HQstraight.sd <- ((dat$sd.straight.HQ)/(dat$sd.straight.HQ + dat$sd.straight.LQ))/sqrt(10000)
+dat <- cbind(dat, Ratio_HQstraight, Ratio_HQstraight.sd)
+
+# Mean Ratio_HQstraight, barplot ######
+ggplot(dat, aes(x=Percent_HQ, y=Ratio_HQstraight, color=Size_X_Type))+
+  geom_boxplot(aes(group=x3_ids), width=3)+
+  # xlim(0.5, 4.25)+
+  theme_classic(base_size=17)+    
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  labs(x = "% HQ food in model", y = "Mean potential feeing in HQ (% time +/- 1 SD)") + 
+  theme(legend.position="bottom") #this removes the legend to the bottom
+
+# Mean Ratio_HQstraight, dotplot ######
+ggplot(dat, aes(x=Percent_HQ, y=Ratio_HQstraight))+
+  geom_jitter(aes(group=x3_ids, color=Size_X_Type), size=3)+
+  geom_errorbar(position=position_dodge(width=0.5), 
+                aes(ymin=(Ratio_HQstraight - Ratio_HQstraight.sd),
+                    ymax=(Ratio_HQstraight + Ratio_HQstraight.sd), 
+                    x=Percent_HQ, width=0.01, color=Size_X_Type ) )  +  
+  #geom_hline(aes(yintercept = 0), linetype = "dashed") + 
+  labs(x = "% HQ food in model", y = "Mean potential escape movement in HQ (% time +/- 1 SD)") + 
+  theme_classic(base_size = 17)    +
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  theme(legend.position="none") #this removes the legend
+
+
+# Stats on log-transformed data  ###########
+#log transform the response data; append to data frame
+log.dat <- log(dat$Ratio_HQstraight)
+test.dat <- cbind(log.dat, dat)
+#create a LM; -1 is VIP to test model vs. null (otherwise only outputs type=NULL)
+lm.test <- lm(log.dat ~ -1+ model.size_sqd * Percent_HQ * Type, data=dat)
+
+summary(lm.test)
+#                                     Estimate Std. Error t value Pr(>|t|)    
+#
+
+
+
+#Post-hoc(ish) test with continuous variable, looking to see whether there are SSDs by model vs. null
+test.lst <- lstrends(lm.test, ~Type, var = "Percent_HQ")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are SSDs between model and null WRT the C:N consumed at diff % HQs available.
+
+test.lst <- lstrends(lm.test, ~Type, var = "model.size_sqd")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are *NOT* SSDs between model and null WRT the C:N consumed at diff. model sizes tested.
+
+################
+#
+
+
+###############################################################################################
+# ***Daily C:N ratio obtained within model  ################
+cn.dat <- read.csv("Documents/Grad School Stuff/2018-2019 Seventh Year/IBM based on Helgoland/*Current model/*CN consumption, IBM run results, 21 Feb 2019 .csv")
+colnames(cn.dat)
+#[1] "x3_ids"          "Size_X_Type"     "Type"            "Percent_HQ"      "hq.px_sqd"       "model.size_sqd"  "Run."           
+#[8] "daily.C_pg"      "err_daily.C_pg"  "daily.N_pg"      "err_daily.N_pg"  "daily.CN"        "up.err_daily.CN" "dn.err_daily.CN"
+
+#daily C:N consumption @ boxplot #####
+ggplot(cn.dat, aes(x=Percent_HQ, y=daily.CN)) +
+  geom_boxplot(aes(group=x3_ids, color=Size_X_Type)) +
+  #add lines to show C:N of A. tonsa, as measured in Systematic Review.
+  geom_hline(aes(yintercept =  5.722868), linetype = "dashed") + 
+  geom_hline(aes(yintercept = (5.722868 + 0.7589524)), linetype = "dashed", color="grey50") + #upper C:N limit, see pg 179 @ blue NB
+  geom_hline(aes(yintercept = (5.722868 - 0.7589524)), linetype = "dashed", color="grey50") + #lower C:N limit, see pg 179 @ blue NB
+  labs(x = "% HQ food in model", y = "Average C:N obtained by foraging (+/- 1 SE)") + 
+  theme_classic(base_size = 17)+
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  theme(legend.position="bottom") #this removes the legend to bottom of fig
+
+
+#daily C:N consumption @ dotplot #####
+ggplot(cn.dat, aes(x=Percent_HQ, y=daily.CN))+
+  geom_jitter(aes(group=x3_ids, color=Size_X_Type), size=4)+
+  geom_errorbar(position=position_dodge(width=0.05), 
+                aes(ymin=(dn.err_daily.CN),
+                    ymax=(up.err_daily.CN), 
+                    x=Percent_HQ, width=0.01, color=Size_X_Type ) )  +  
+  
+  geom_hline(aes(yintercept = 5.722868), linetype = "dashed") + 
+  geom_hline(aes(yintercept = (5.722868 + 0.7589524)), linetype = "dashed", color="grey50") + #upper C:N limit, see pg 179 @ blue NB
+  geom_hline(aes(yintercept = (5.722868 - 0.7589524)), linetype = "dashed", color="grey50") + #lower C:N limit, see pg 179 @ blue NB
+  
+  labs(x = "% HQ food in model", y = "Average C:N obtained by foraging (+/- 1 SE)") + 
+  theme_classic(base_size = 17)+
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  theme(legend.position="none") #this removes the legend
+
+
+
+################
+#Testing an OLS regression, with some post-hoc testing ################
+#log transform the response data
+log.AVG_daily.CN.ingest <- log(cn.dat$daily.CN)
+#Append to dataframe
+newest.dat <- cbind(cn.dat, log.AVG_daily.CN.ingest)
+#create a LM; -1 is VIP to test model vs. null (otherwise only outputs type=NULL)
+lm.test <- lm(log.AVG_daily.CN.ingest ~ -1+ model.size_sqd * Percent_HQ * Type, data=newest.dat)
+
+summary(lm.test)
+#                                     Estimate Std. Error t value Pr(>|t|)    
+#model.size_sqd                     -8.962e-06  3.759e-06  -2.384   0.0176 *  
+#Percent_HQ                         -1.751e-02  5.096e-04 -34.355   <2e-16 ***
+#Typemodel                           2.392e+00  1.112e-02 215.077   <2e-16 ***
+#Typenull                            2.438e+00  1.112e-02 219.246   <2e-16 ***
+#model.size_sqd:Percent_HQ           2.760e-09  1.723e-07   0.016   0.9872    
+#model.size_sqd:Typenull             7.326e-06  5.316e-06   1.378   0.1690    
+#Percent_HQ:Typenull                 1.240e-03  7.207e-04   1.720   0.0861 .  
+#model.size_sqd:Percent_HQ:Typenull  2.210e-08  2.436e-07   0.091   0.9278    
+#---
+#Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+#Residual standard error: 0.08341 on 412 degrees of freedom
+#Multiple R-squared:  0.9986,	Adjusted R-squared:  0.9985 
+#F-statistic: 3.595e+04 on 8 and 412 DF,  p-value: < 2.2e-16
+
+
+#Post-hoc(ish) test with continuous variable, looking to see whether there are SSDs by model vs. null
+test.lst <- lstrends(lm.test, ~Type, var = "Percent_HQ")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are SSDs between model and null WRT the C:N consumed at diff % HQs available.
+
+test.lst <- lstrends(lm.test, ~Type, var = "model.size_sqd")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are *NOT* SSDs between model and null WRT the C:N consumed at diff. model sizes tested.
+
+
+#Plotting the log-transformed C:N consumption data ####
+#log(daily C:N consumption) @ boxplot #####
+ggplot(cn.dat, aes(x=log(Percent_HQ), y=log(daily.CN)))+
+  geom_boxplot(aes(group=x3_ids, color=Size_X_Type), width=2.5)+
+  geom_hline(aes(yintercept = log(5.722868)), linetype = "dashed") + 
+  geom_hline(aes(yintercept = log(5.722868 + 0.7589524)), linetype = "dashed", color="grey50") + #upper C:N limit, see pg 179 @ blue NB
+  geom_hline(aes(yintercept = log(5.722868 - 0.7589524)), linetype = "dashed", color="grey50") + #lower C:N limit, see pg 179 @ blue NB
+  
+  labs(x = "log(% HQ food in model)", y = "log(Average C:N obtained by foraging (+/- 1 SE))") + 
+  theme_classic(base_size = 17)+
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  theme(legend.position="bottom") #this removes the legend to bottom of fig
+
+
+#log(daily C:N consumption) @ dotplot #####
+ggplot(cn.dat, aes(x=Percent_HQ, y=log(daily.CN)))+
+  geom_jitter(aes(group=x3_ids, color=Size_X_Type), size=4)+
+  geom_errorbar(position=position_dodge(width=0.05), 
+                aes(ymin=(log(dn.err_daily.CN)),
+                    ymax=(log(up.err_daily.CN)), 
+                    x=Percent_HQ, width=0.01, color=Size_X_Type ) )  +  
+  
+  geom_hline(aes(yintercept = log(5.722868)), linetype = "dashed") + 
+  geom_hline(aes(yintercept = log(5.722868 + 0.7589524)), linetype = "dashed", color="grey50") + #upper C:N limit, see pg 179 @ blue NB
+  geom_hline(aes(yintercept = log(5.722868 - 0.7589524)), linetype = "dashed", color="grey50") + #lower C:N limit, see pg 179 @ blue NB
+  
+  labs(x = "% HQ food in model", y = "Average C:N obtained by foraging (+/- 1 SE)") + 
+  theme_classic(base_size = 17)+
+  scale_color_brewer(palette = "PuOr")+ #colors in orange (model) and purple (null)
+  theme(legend.position="none") #this removes the legend
+
+
+################
+#Stats on log-transformed data #####
+#log transform the response data; append to data frame
+log.dat <- log(cn.dat$daily.CN)
+test.dat <- cbind(log.dat, dat)
+#create a LM; -1 is VIP to test model vs. null (otherwise only outputs type=NULL)
+lm.test <- lm(log.dat ~ -1+ model.size_sqd * Percent_HQ * Type, data=dat)
+
+summary(lm.test)
+#                                     Estimate Std. Error t value Pr(>|t|)    
+#model.size_sqd                     -8.963e-06  3.760e-06  -2.384   0.0176 *  
+#Percent_HQ                         -1.751e-02  5.097e-04 -34.354   <2e-16 ***
+#Typemodel                           2.238e+00  1.112e-02 201.236   <2e-16 ***
+#Typenull                            2.284e+00  1.112e-02 205.406   <2e-16 ***
+#model.size_sqd:Percent_HQ           2.774e-09  1.723e-07   0.016   0.9872    
+#model.size_sqd:Typenull             7.327e-06  5.317e-06   1.378   0.1690    
+#Percent_HQ:Typenull                 1.240e-03  7.208e-04   1.720   0.0862 .  
+#model.size_sqd:Percent_HQ:Typenull  2.209e-08  2.437e-07   0.091   0.9278    
+
+
+
+#Post-hoc(ish) test with continuous variable, looking to see whether there are SSDs by model vs. null
+test.lst <- lstrends(lm.test, ~Type, var = "Percent_HQ")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are SSDs between model and null WRT the C:N consumed at diff % HQs available.
+
+test.lst <- lstrends(lm.test, ~Type, var = "model.size_sqd")
+test.lst          # slope estimates and CIs
+pairs(test.lst)   # comparisons
+#There are *NOT* SSDs between model and null WRT the C:N consumed at diff. model sizes tested.
+
+
+
+###############################################################################################
+
+
+
+
+
+
+
+
+###############################################################################################
+###############################################################################################
+
+###############################################################################################
+###############################################################################################
+
